@@ -70,7 +70,7 @@ setup(
     version='0.1.0',
     description='the {{ service_name }} service for Portal3',
     long_description=readme,
-    author='cdnetworks',
+    author='s8sg',
     tests_require=test_requirements,
     cmdclass={
          'test': PyTest,

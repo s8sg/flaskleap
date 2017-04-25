@@ -2,7 +2,7 @@
 
 ## Overview
 
-Generates Flask Service blueprint code from a Swagger Specification doc based on CDNetworks P3 project  specification
+Generates Flask Service blueprint code from a Swagger Specification doc based on project specification
 
 **This project is diecly modified on:** `github.com/guokr/swagger-py-codegen`  
   

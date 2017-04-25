@@ -9,9 +9,9 @@ The {{ service_name }} Service for Portal3
 **Run the {{ service_name }} docker container**
 ```bash
 // Build the image
-$ docker build -t cdnetworks/{{ service_name }} .
+$ docker build -t s8sg/{{ service_name }} .
 // Start the container with default conf
-$ docker run -p 8080:8080 cdnetworks/{{ service_name }}
+$ docker run -p 8080:8080 s8sg/{{ service_name }}
 // Start the container with manual conf (refer Configuration)
 $ docker run -p 8080:8080 -e "SERVICE_CONFIG_PATH=/config/config.py" -v /home/cdnw/p3/{{ service_name }}/config/config.py:/config/config.py p3/{{ service_name }}
 ```

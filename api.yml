@@ -1,7 +1,6 @@
 swagger: "2.0"
 info:
   version: "0.0.1"
-  title: CDNetworks P3 API
 # during dev, should point to your local machine
 host: localhost:8080
 # basePath prefixes all resource paths 
