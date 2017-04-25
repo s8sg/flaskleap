@@ -1,0 +1,188 @@
+swagger: "2.0"
+info:
+  version: "0.0.1"
+  title: CDNetworks P3 API
+# during dev, should point to your local machine
+host: localhost:8080
+# basePath prefixes all resource paths 
+basePath: v1 
+
+# 
+schemes:
+  # tip: remove http to make production-grade
+  - http
+  - https
+# format of bodies a client can send (Content-Type)
+consumes:
+  - application/json
+# format of the responses to the client (Accepts)
+produces:
+  - application/json
+paths:
+  /hello/{name}:
+    # binds a127 app logic to a route
+    x-swagger-router-controller: hello_world
+    get:
+      description: Returns 'Hello' to the caller
+      summary: 当前用户可用的认证方式
+      # used as the method name of the controller
+      operationId: hello
+      parameters:
+        - name: name
+          in: path
+          #description: The name of the person to whom to say hello
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            $ref: "#/definitions/HelloWorldResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /hello/greet/{name}:
+    # binds a127 app logic to a route
+    x-swagger-router-controller: hello_world
+    get:
+      description: Returns 'Hello' to the caller
+      summary: 当前用户可用的认证方式
+      # used as the method name of the controller
+      operationId: hello
+      parameters:
+        - name: name
+          in: path
+          #description: The name of the person to whom to say hello
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            $ref: "#/definitions/HelloWorldResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+ 
+
+  /oauth/auth_approach/{approach}:
+    get:
+      summary: 当前用户可用的认证方式
+      parameters:
+        - name: approach
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: auth approach list
+          schema:
+            $ref: "#/definitions/HelloWorldResponse"
+        default:
+          description: Unexpected error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /login:
+    x-swagger-router-controller: login
+    post:
+      description: Allows users to log into the API with their credentials
+      operationId: post
+      parameters:
+        - name: credentials
+          description: The User credentials (Username/Password)
+          in: body
+          required: true
+          schema:
+            $ref: "#/definitions/LoginRequestBody"
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            $ref: "#/definitions/GeneralResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /swagger:
+    x-swagger-pipe: swagger_raw_cors
+# complex objects have schema definitions
+definitions:
+  LoginRequestBody:
+    type: object
+    properties:
+      username:
+        type: string
+        description: The email address of the user e.g. lee.sumin@cdentworks.com
+      password:
+        type: string
+        format: password
+        description: The users password
+    required:
+      - username
+      - password
+  HelloWorldResponse:
+    type: object
+    required:
+      - message
+    properties:
+      message:
+        type: string
+  GeneralResponse:
+    type: object
+    properties:
+      success:
+        type: integer
+        format: int32
+        description: returns 1 if successful
+      message:
+        type: string
+        description: a short comment 
+    required:
+      - success
+  ErrorResponse:
+    required:
+      - message
+    properties:
+      message:
+        type: string
+      errors:
+        type: array
+        items: 
+          type: object
+          properties:
+            code:
+              type: string
+  Approach:
+    required:
+      - approach
+    properties:
+      approach:
+        type: string
+      identity:
+        type: string
+  Error:
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      fields_:
+        type: string
+
+#parameters:
+#  AccessToken:
+#    name: Authentication
+#    in: header
+#    required: true
+#    type: string
