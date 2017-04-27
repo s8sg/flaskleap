@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from collections import OrderedDict
+from inspect import getsource
 
 from .base import Code, CodeGenerator
 from .parser import schema_var_name
@@ -8,7 +9,7 @@ import six
 
 class Schema(Code):
 
-    template = 'jsonschema/schemas.tpl'
+    template = 'flask/schemas.tpl'
     dest_template = '%(package)s/schemas.py'
     override = True
 
@@ -18,7 +19,6 @@ def _parameters_to_schemas(params):
     for location in locations:
         required = []
         properties = {}
-        type_ = 'object'
         for param in params:
             if param.get('in') != location:
                 continue
@@ -41,14 +41,9 @@ def _parameters_to_schemas(params):
 
 def build_data(swagger):
 
-    # (endpoint, method) = {'body': schema_name or schema,
-    #                       'query': schema_name, ..}
-    validators = OrderedDict()
-    # (endpoint, method) = {'200': {'schema':, 'headers':, 'examples':},
-    #                       'default': ..}
-    filters = OrderedDict()
-    # (endpoint, method) = [scope_a, scope_b]
-    scopes = OrderedDict()
+    validators = OrderedDict()  # (endpoint, method) = {'body': schema_name or schema, 'query': schema_name, ..}
+    filters = OrderedDict()  # (endpoint, method) = {'200': {'schema':, 'headers':, 'examples':}, 'default': ..}
+    scopes = OrderedDict()  # (endpoint, method) = [scope_a, scope_b]
 
     # path parameters
     for path, _ in swagger.search(['paths', '*']):
@@ -60,8 +55,7 @@ def build_data(swagger):
 
         # methods
         for p, data in swagger.search(path + ('*',)):
-            if p[-1] not in ['get', 'post', 'put', 'delete',
-                             'patch', 'options', 'head']:
+            if p[-1] not in ['get', 'post', 'put', 'delete', 'patch', 'options', 'head']:
                 continue
             method_param = []
             try:
@@ -94,14 +88,15 @@ def build_data(swagger):
                 scopes[(endpoint, method)] = list(security.values()).pop()
                 break
 
-    schemas = OrderedDict([(schema_var_name(path), swagger.get(path))
-                          for path in swagger.definitions])
+    schemas = OrderedDict([(schema_var_name(path), swagger.get(path)) for path in swagger.definitions])
 
     data = dict(
         schemas=schemas,
         validators=validators,
         filters=filters,
         scopes=scopes,
+        merge_default=getsource(merge_default),
+        normalize=getsource(normalize)
     )
     return data
 
@@ -112,3 +107,131 @@ class SchemaGenerator(CodeGenerator):
         yield Schema(build_data(self.swagger))
 
 
+def merge_default(schema, value, get_first=True):
+    # TODO: more types support
+    type_defaults = {
+        'integer': 9573,
+        'string': 'something',
+        'object': {},
+        'array': [],
+        'boolean': False
+    }
+
+    results = normalize(schema, value, type_defaults)
+    if get_first:
+        return results[0]
+    return results
+
+
+def build_default(schema):
+    return merge_default(schema, None)
+
+
+def normalize(schema, data, required_defaults=None):
+
+    import six
+
+    if required_defaults is None:
+        required_defaults = {}
+    errors = []
+
+    class DataWrapper(object):
+
+        def __init__(self, data):
+            super(DataWrapper, self).__init__()
+            self.data = data
+
+        def get(self, key, default=None):
+            if isinstance(self.data, dict):
+                return self.data.get(key, default)
+            return getattr(self.data, key, default)
+
+        def has(self, key):
+            if isinstance(self.data, dict):
+                return key in self.data
+            return hasattr(self.data, key)
+
+        def keys(self):
+            if isinstance(self.data, dict):
+                return list(self.data.keys())
+            return list(vars(self.data).keys())
+
+        def get_check(self, key, default=None):
+            if isinstance(self.data, dict):
+                value = self.data.get(key, default)
+                has_key = key in self.data
+            else:
+                try:
+                    value = getattr(self.data, key)
+                except AttributeError:
+                    value = default
+                    has_key = False
+                else:
+                    has_key = True
+            return value, has_key
+
+    def _normalize_dict(schema, data):
+        result = {}
+        if not isinstance(data, DataWrapper):
+            data = DataWrapper(data)
+
+        for key, _schema in six.iteritems(schema.get('properties', {})):
+            # set default
+            type_ = _schema.get('type', 'object')
+
+            # get value
+            value, has_key = data.get_check(key)
+            if has_key:
+                result[key] = _normalize(_schema, value)
+            elif 'default' in _schema:
+                result[key] = _schema['default']
+            elif key in schema.get('required', []):
+                if type_ in required_defaults:
+                    result[key] = required_defaults[type_]
+                else:
+                    errors.append(dict(name='property_missing',
+                                       message='`%s` is required' % key))
+
+        for _schema in schema.get('allOf', []):
+            rs_component = _normalize(_schema, data)
+            rs_component.update(result)
+            result = rs_component
+
+        additional_properties_schema = schema.get('additionalProperties', False)
+        if additional_properties_schema:
+            aproperties_set = set(data.keys()) - set(result.keys())
+            for pro in aproperties_set:
+                result[pro] = _normalize(additional_properties_schema, data.get(pro))
+
+        return result
+
+    def _normalize_list(schema, data):
+        result = []
+        if hasattr(data, '__iter__') and not isinstance(data, dict):
+            for item in data:
+                result.append(_normalize(schema.get('items'), item))
+        elif 'default' in schema:
+            result = schema['default']
+        return result
+
+    def _normalize_default(schema, data):
+        if data is None:
+            return schema.get('default')
+        else:
+            return data
+
+    def _normalize(schema, data):
+        if not schema:
+            return None
+        funcs = {
+            'object': _normalize_dict,
+            'array': _normalize_list,
+            'default': _normalize_default,
+        }
+        type_ = schema.get('type', 'object')
+        if not type_ in funcs:
+            type_ = 'default'
+
+        return funcs[type_](schema, data)
+
+    return _normalize(schema, data), errors

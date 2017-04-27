@@ -328,7 +328,7 @@ class FlaskGenerator(CodeGenerator):
             endpoint = _path_to_endpoint(swagger_path)
             name = _path_to_resource_name(swagger_path)
 
-            methods = OrderedDict()
+            methods = dict()
             for method in SUPPORT_METHODS:
                 if method not in data:
                     continue
@@ -336,6 +336,7 @@ class FlaskGenerator(CodeGenerator):
                 validator = self.validators.get((endpoint, method.upper()))
                 if validator:
                     methods[method]['requests'] = list(validator.keys())
+                    methods[method]['validator'] = validator['json']
 
                 for status, res_data in six.iteritems(
                         data[method].get('responses', {})):
@@ -354,7 +355,6 @@ class FlaskGenerator(CodeGenerator):
                 module_name = url.split('/')[1]
             else:
                 module_name = url.split('/')[0]
-            print "Module: ", module_name
             found = False
             if (self.group_factor > 0):
                 # Check if moduels already added
@@ -419,7 +419,6 @@ class FlaskGenerator(CodeGenerator):
     def _process(self):
         # Get Views
         views = self._process_data()
-        print views
         yield AppDesc()
         yield AppStart()
         yield App(dict(with_ui=True, **views))

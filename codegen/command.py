@@ -71,9 +71,6 @@ def generate(destination, swagger_doc, force=False, template_dir=None,
     package = destination.replace('-', '_')
     data = spec_load(swagger_doc)
     swagger = Swagger(data, pool)
-    print swagger.data
-    print swagger.origin_data
-    print swagger._definitions
     generator = FlaskGenerator(swagger)
     generator.package = package
     generator.group_factor = group_factor

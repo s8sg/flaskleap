@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 import os
-import json
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -17,11 +16,7 @@ class Code(object):
 
     def dest(self, env=None):
         env = env or {}
-        print "Basic Env: ", json.dumps(env)
         env.update(self.dist_env)
-
-        # env.update(self.data)
-        print "Updated Env: ", json.dumps(env)
         return self.dest_template % env
 
     def before_render(self, jinja_env):
@@ -69,4 +64,3 @@ class Template(object):
     def render_code(self, code):
         code.before_render(self)
         return self.render(code.template, **code.data)
-
