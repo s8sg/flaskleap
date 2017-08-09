@@ -3,12 +3,15 @@ import json
 from flask import (Flask, jsonify)
 from flasgger import Swagger
 from {{ service_name }}.common.utils import (APIException, APIResponse)
+from werkzeug.wsgi import DispatcherMiddleware
+from aaa_client import RBAC
 
 config_variable_name = 'SERVICE_CONFIG_PATH'
 default_config_path = os.path.join(os.path.dirname(__file__),
                                    'config/config.py')
 os.environ.setdefault(config_variable_name, default_config_path)
 
+rbac = None
 # TODO: Define Global resource (e.g. DB object)
 
 
@@ -19,6 +22,9 @@ def create_app(config_name=None):
         app.config.from_pyfile(config_name)
     else:
         app.config.from_envvar(config_variable_name)
+
+    app.wsgi_app = DispatcherMiddleware(Flask('dummy_app'), {
+	            app.config['APPLICATION_ROOT']: app.wsgi_app})
 
     init_app(app)
     template = None
@@ -32,6 +38,8 @@ def create_app(config_name=None):
 def init_app(app):
     app.logger.info("initializing app context")
 
+    rbac_server = app.config.get("AAA_SERVER", "127.0.0.1:8080")
+    rbac = RBAC(rbac_server, cache=True)
     # TODO: Init GLocal Object (e.g DB Object)
 
     # Define API Exception Handler

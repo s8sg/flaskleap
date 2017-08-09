@@ -1,6 +1,8 @@
 from __future__ import absolute_import
-import os
+from codegen.names import format_as
 from jinja2 import Environment, FileSystemLoader
+from yapf.yapflib.yapf_api import FormatCode
+import os
 
 
 class Code(object):
@@ -22,6 +24,11 @@ class Code(object):
     def before_render(self, jinja_env):
         pass
 
+    def language(self):
+        if self.dest_template.endswith('.py'):
+            return 'python'
+        else:
+            return None
 
 class CodeGenerator(object):
 
@@ -52,7 +59,8 @@ class Template(object):
     def __init__(self):
         self.loader = FileSystemLoader(os.path.join(
             os.path.dirname(__file__), 'templates'))
-        self.env = Environment(loader=self.loader)
+        self.env = Environment(loader=self.loader, keep_trailing_newline=True)
+        self.env.filters['format_as'] = format_as
 
     def add_searchpath(self, path):
         self.loader.searchpath.insert(0, path)
@@ -63,4 +71,7 @@ class Template(object):
 
     def render_code(self, code):
         code.before_render(self)
-        return self.render(code.template, **code.data)
+        rendered = self.render(code.template, **code.data)
+        if code.language() == 'python':
+            rendered, _ = FormatCode(rendered)
+        return rendered

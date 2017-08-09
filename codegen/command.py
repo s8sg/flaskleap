@@ -61,11 +61,17 @@ def print_version(ctx, param, value):
 @click.option('-g', '--group-factor',
               default=1, help='The api groupping factor for creating a ' +
               'module, zero to disable')
+@click.option('-a', '--author', default="s8sg",
+              help="author of the service")
+@click.option('-m', '--mail', default="s8sg@crazy.world",
+              help="mailid of the author")
+@click.option('-v', '--service-version', default="0.1.0",
+              help="initial service version")
 @click.option('--version', is_flag=True, callback=print_version,
               expose_value=False, is_eager=True,
               help='Show current version.')
-def generate(destination, swagger_doc, force=False, template_dir=None,
-             group_factor=1):
+def generate(destination, swagger_doc, author, mail, service_version,
+             force=False, template_dir=None, group_factor=1):
     jobs = 4
     pool = Pool(processes=int(jobs))
     package = destination.replace('-', '_')
@@ -74,6 +80,10 @@ def generate(destination, swagger_doc, force=False, template_dir=None,
     generator = FlaskGenerator(swagger)
     generator.package = package
     generator.group_factor = group_factor
+    generator.author = author
+    generator.mail = mail
+    generator.version = service_version
+
     template = Template()
     if template_dir:
         template.add_searchpath(template_dir)

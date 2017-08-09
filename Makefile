@@ -29,7 +29,7 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 
 lint:
-	flake8 {{ service_name }} test
+	flake8 codegen test
 
 test: requirments
 	python setup.py coverage
@@ -38,31 +38,20 @@ test-all:
 	tox
 
 docs:
-	rm -f docs/{{ service_name }}.rst
+	rm -f docs/codegen.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ {{ service_name }}
+	sphinx-apidoc -o docs/ codegen
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	open docs/_build/html/index.html
 
 release: requirments clean
-	python setup.py register -r pypi
-	python setup.py sdist upload -r pypi
-	python setup.py bdist_wheel upload
-
-sdist: requirments clean
 	python setup.py sdist
-	python setup.py bdist_wheel upload
 	ls -l dist
+	twine upload -r nexus dist/*
 
 install: requirments clean
 	python setup.py install
 
 install-dev: requirments clean 
 	python setup.py develop
-
-install-docker:
-	sh ./build-steps/build-docker.sh {{ service_name }}-local {{ AUTHOR }}/{{ service_name}}
-
-release-docker:
-	sh ./build-steps/release-docker.sh {{ AUTHOR }}/{{ service_name }} {{ service_name }}-service $(VERSION)

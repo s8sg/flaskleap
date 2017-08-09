@@ -1,4 +1,4 @@
-from flask import (Response, jsonify)
+from flask import Response, jsonify
 
 
 class APIException(Exception):
@@ -15,6 +15,9 @@ class APIException(Exception):
         rv = dict(self.payload or ())
         rv['message'] = self.message
         return rv
+
+    def __str__(self):
+        return self.message
 
 
 class APIResponse(Response):

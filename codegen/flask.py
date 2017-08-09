@@ -2,11 +2,15 @@ from __future__ import absolute_import
 import json
 import six
 import re
+import yaml
 from collections import OrderedDict
 from .base import Code, CodeGenerator
 from .jsonschema import Schema, SchemaGenerator, build_default
+from operator import itemgetter
 
 SUPPORT_METHODS = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head']
+RESERVED_MODULES = ['common', 'config', 'app', 'blueprints', 'resources',
+                    'routes', 'run', 'schemas', 'views']
 
 
 class AppDesc(Code):
@@ -255,6 +259,20 @@ def _path_to_resource_name(swagger_path):
     return _remove_characters(swagger_path.title(), '{}/_-')
 
 
+def _endpoint_id(endpoint, method):
+    return endpoint + "_" + method
+
+
+def _endpoint_name(resource_name, method):
+    return resource_name + method.title()
+
+
+def _sanitize_module_name(name, illegal_names=RESERVED_MODULES):
+    """Append '_api' to module names when they conflict with our modules."""
+    return re.sub(r'^((%s)(_api)*)$' %
+                  '|'.join(illegal_names), r'\1_api', name)
+
+
 def _location(swagger_location):
     location_map = {
         'body': 'json',
@@ -283,6 +301,9 @@ class FlaskGenerator(CodeGenerator):
         # The value of group segment is always >= 1
         # self.group_segment_count = 1
         # NOTE: Not being used now
+        self.author = ""
+        self.mail = ""
+        self.version = ""
 
     def _dependence_callback(self, code):
         if not isinstance(code, Schema):
@@ -318,22 +339,22 @@ class FlaskGenerator(CodeGenerator):
 
         views = {}
         service_endpoints = []
-        modules = []
+        modules = {}
 
         endpoint_store = {}
 
         for paths, data in self.swagger.search(['paths', '*']):
             swagger_path = paths[-1]
             url, params = _swagger_to_flask_url(swagger_path, data)
-            endpoint = _path_to_endpoint(swagger_path)
-            name = _path_to_resource_name(swagger_path)
+            ep = _path_to_endpoint(swagger_path)
+            nm = _path_to_resource_name(swagger_path)
 
             methods = dict()
             for method in SUPPORT_METHODS:
                 if method not in data:
                     continue
                 methods[method] = {}
-                validator = self.validators.get((endpoint, method.upper()))
+                validator = self.validators.get((ep, method.upper()))
                 if validator:
                     methods[method]['requests'] = list(validator.keys())
                     methods[method]['validator'] = validator['json']
@@ -350,77 +371,101 @@ class FlaskGenerator(CodeGenerator):
                                 res_data.get('headers'))
                         methods[method]['response'] = response
                         break
-            module_name = ""
-            if url.startswith("/"):
-                module_name = url.split('/')[1]
-            else:
-                module_name = url.split('/')[0]
-            found = False
-            if (self.group_factor > 0):
-                # Check if moduels already added
-                for module in modules:
-                    if module_name == module["name"]:
-                        module["endpoints"].append(dict(
-                                                     url=url,
-                                                     params=params,
-                                                     endpoint=endpoint,
-                                                     methods=methods,
-                                                     name=name
-                                                     ))
-                        found = True
-                        break
-                if found:
-                    continue
+            for method in methods:
+                # Generate the endpoint Id/Name considering the methods type
+                name = _endpoint_name(nm, method)
+                endpoint = _endpoint_id(ep, method)
 
-            # Check if a module can be created
-            if (self.group_factor != 0) and \
-               (module_name in endpoint_store) and \
-               (len(endpoint_store[module_name]) == self.group_factor):
-                oldEndpoints = endpoint_store[module_name]
-                del endpoint_store[module_name]
-                newEndpoint = dict(
-                                    url=url,
-                                    params=params,
-                                    endpoint=endpoint,
-                                    methods=methods,
-                                    name=name
-                                   )
-                endpoints = [newEndpoint]
-                endpoints.extend(oldEndpoints)
-                module = {"name": module_name, "endpoints": endpoints}
-                modules.append(module)
-            # Add it as a endpoint
-            else:
-                if module_name in endpoint_store:
-                    endpoint_store[module_name].append(dict(
-                                                     url=url,
-                                                     params=params,
-                                                     endpoint=endpoint,
-                                                     methods=methods,
-                                                     name=name
-                                                    ))
-
+                module_name = ""
+                modified_url = ""
+                if url.startswith("/"):
+                    module_name = url.split('/')[1]
+                    modified_url = "/".join(url.split('/')[2:])
                 else:
-                    endpoint_store[module_name] = [dict(
-                                                     url=url,
-                                                     params=params,
-                                                     endpoint=endpoint,
-                                                     methods=methods,
-                                                     name=name
-                                                    )]
-        for endpoint in endpoint_store:
-            service_endpoints.extend(endpoint_store[endpoint])
+                    module_name = url.split('/')[0]
+                    modified_url = "/".join(url.split('/')[1:])
+                if (self.group_factor > 0):
+                    # Check if this endpoint belongs in an existing module
+                    module = modules.get(module_name)
+                    if module:
+                        module["endpoints"].append({
+                            'url': modified_url,
+                            'params': params,
+                            'endpoint': endpoint,
+                            'methods': {method: methods[method]},
+                            'name': name
+                        })
+                        continue
 
-        views["service_endpoints"] = service_endpoints
-        views["modules"] = modules
+                # Check if a module can be created
+                if (self.group_factor > 0) and \
+                   (module_name in endpoint_store) and \
+                   (len(endpoint_store[module_name]) == self.group_factor):
+                    oldEndpoints = endpoint_store[module_name]
+                    for oldendpoint in oldEndpoints:
+                        oldendpoint_url = oldendpoint['url']
+                        oldmodified_url = ""
+                        if url.startswith("/"):
+                            oldmodified_url = "/".join(
+                                              oldendpoint_url.split('/')[2:])
+                        else:
+                            oldmodified_url = "/".join(
+                                              oldendpoint_url.split('/')[1:])
+                        oldendpoint['url'] = oldmodified_url
+                    del endpoint_store[module_name]
+                    newEndpoint = dict(
+                                        url=modified_url,
+                                        params=params,
+                                        endpoint=endpoint,
+                                        methods={method: methods[method]},
+                                        name=name
+                                       )
+                    endpoints = [newEndpoint]
+                    endpoints.extend(oldEndpoints)
+                    endpoints = sorted(endpoints, key=itemgetter('name'))
+
+                    modules[module_name] = {
+                        "name": _sanitize_module_name(module_name),
+                        "endpoints": endpoints
+                    }
+                # Add it as a endpoint
+                else:
+                    if module_name in endpoint_store:
+                        endpoint_store[module_name].append(
+                                        dict(
+                                             url=url,
+                                             params=params,
+                                             endpoint=endpoint,
+                                             methods={method: methods[method]},
+                                             name=name
+                                            ))
+
+                    else:
+                        endpoint_store[module_name] = [
+                                        dict(
+                                             url=url,
+                                             params=params,
+                                             endpoint=endpoint,
+                                             methods={method: methods[method]},
+                                             name=name
+                                            )]
+        for endpoint_group in endpoint_store:
+            service_endpoints.extend(endpoint_store[endpoint_group])
+        views["service_endpoints"] = sorted(service_endpoints,
+                                            key=itemgetter('name'))
+        views["modules"] = sorted(modules.values(), key=itemgetter('name'))
         views["service_name"] = self.package
+        views["base_path"] = self.swagger.base_path
+        views["AUTHOR"] = self.author
+        views["MAIL"] = self.mail
+        views["VERSION"] = self.version
         return views
 
     def _process(self):
         # Get Views
         views = self._process_data()
-        yield AppDesc()
-        yield AppStart()
+        yield AppDesc(views)
+        yield AppStart(views)
         yield App(dict(with_ui=True, **views))
         yield Blueprint(views)
         yield Router(views)
@@ -451,7 +496,8 @@ class FlaskGenerator(CodeGenerator):
         swagger.pop('host', None)
         swagger.pop('schemes', None)
         yield Specification(dict(swagger=json.dumps(swagger, indent=2)))
-        yield SwaggerSpec(dict(swagger=self.swagger.origin_data))
+        yield SwaggerSpec(dict(swagger=yaml.dump(self.swagger.origin_data,
+                                                 default_flow_style=False)))
         yield Setup(views)
         yield SetupConfig()
         yield Server(views)
@@ -462,7 +508,7 @@ class FlaskGenerator(CodeGenerator):
         yield Makefile(views)
         yield Readme(views)
         yield Requirements()
-        yield ServiceConfig()
+        yield ServiceConfig(dict(base_path=self.swagger.base_path))
         yield Tox(views)
         yield Test()
         yield TestCode(views)

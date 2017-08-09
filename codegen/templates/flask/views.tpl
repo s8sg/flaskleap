@@ -1,8 +1,7 @@
-from {{ service_name }}.resources import {{ service_name }}
+from {{ service_name }}.resources import {{ service_name | format_as('class') }}
+from {{ service_name }}.app import rbac
 
 
-class {{ service_name }}_impl({{ service_name }}):
-
-    def __init__(self):
-        # TODO: Implement the Abstruct Method
-        pass
+class {{ service_name | format_as('class') }}Impl({{ service_name | format_as('class') }}):
+    # TODO: Implement handler methods for defined endpoints
+    pass

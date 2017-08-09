@@ -1,8 +1,9 @@
-from {{ service_name }}.{{ module.name }}.resources import {{ module.name }}
+from {{ service_name }}.{{ module.name }}.resources import {{ module.name | format_as('class') }}
+from {{ service_name }}.app import rbac
 
 
-class {{ module.name }}_impl({{ module.name }}):
+class {{ module.name | format_as('class') }}Impl({{ module.name | format_as('class') }}):
 
     def __init__(self):
-        # TOFO: Implement the class
+        # TODO: Implement the class
         pass

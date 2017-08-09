@@ -49,28 +49,23 @@ class PyTestWithCoverage(PyTest):
 
 
 requirements = [
-        "Flask>=0.2",
-        "python-ldap",
-        "flasgger",
-        "watchdog"
-        # "SQLAlchemy>=0.6",
-        # "Flask-SQLAlchemy",
-        # "sqlalchemy-migrate",
+    "Flask>=0.2",
+    "flasgger",
+    "watchdog",
 ]
 
 test_requirements = [
     "pytest",
     "pytest-cov",
-    "python-ldap"
 ]
 
 
 setup(
     name='{{ service_name }}',
-    version='0.1.0',
+    version='{{ VERSION }}',
     description='the {{ service_name }} service for Portal3',
     long_description=readme,
-    author='s8sg',
+    author='{{ AUTHOR }}',
     tests_require=test_requirements,
     cmdclass={
          'test': PyTest,

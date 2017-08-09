@@ -1,1 +1,1 @@
-{{ swagger }}
+{{ swagger|trim }}

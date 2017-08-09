@@ -10,7 +10,7 @@ with open('codegen/_version.py', 'rb') as f:
         f.read().decode('utf-8')).group(1)))
 
 setup(
-    name='flask-codegen',
+    name='flask-leap',
     description='Generate Flask code from Swagger docs',
     version=version,
     packages=['codegen'],
@@ -18,10 +18,12 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'flask-codegen=codegen:generate'
+            'flask-leap=codegen:generate'
         ]
     },
-    install_requires=['PyYAML', 'click', 'jinja2', 'dpath', 'six'],
+    install_requires=[
+        'PyYAML', 'click', 'jinja2', 'dpath', 'six', 'yapf~=0.16.2'
+    ],
     tests_require=['pytest'],
     classifiers=[
         'Development Status :: 3 - Alpha',

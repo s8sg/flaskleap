@@ -2,13 +2,14 @@
 
 ## Overview
 
-Generates Flask Service blueprint code from a Swagger Specification doc based on project specification
+Generates Flask Service blueprint code baded on Swagger Specification
 
 **This project is diecly modified on:** `github.com/guokr/swagger-py-codegen`  
   
 **How its different:**  
   
-Flask Code Gen is completly based on requirments for p3 services. It Automates:  
+Flask Code Gen is completly based on base requirments for standard build and integration. 
+It Automates:  
 **1>** Module Creation (flask blueprint) and grouping of API's    
 **2>** Abstract API views to support easier API changes  
 **3>** Python Project setup (setuptools, tox, pycov, flake8, pydoc integration)  
@@ -18,8 +19,15 @@ Flask Code Gen is completly based on requirments for p3 services. It Automates:
 
 ## Install
 
+Install stable package from dist:
 ```
-pip install flask-codegen
+pip install flask-leap
+```
+
+Install from code: 
+
+```
+make install flask-leap
 ```
 
 ## Usage
@@ -27,16 +35,27 @@ pip install flask-codegen
 Create all:
 
 ```
-flask-codegen --swagger-doc api.yml example
+flask-leap --swagger-doc api.yml example
 ```
 
 Command Options:
+```bash
+flask-leap --help
+Usage: flask-leap [OPTIONS] DESTINATION
 
-    -s, --swagger, --swagger-doc        Swagger doc file.  [required]
-    -f, --force                         Force overwrite of all the Generated file.
-    -g, --group-factor                  Group info a module based given no of occurance of same API path
-    -t, --template-dir                  Path of your custom templates directory.
-    --help                              Show this message and exit.
+Options:
+-s, --swagger, --swagger-doc TEXT
+Swagger doc file.  [required]
+-f, --force                     Force overwrite to generated files.
+-t, --template-dir TEXT         Path of your custom templates directory.
+-g, --group-factor INTEGER      The api groupping factor for creating a
+module, zero to disable
+-a, --author TEXT               author of the service
+-m, --mail TEXT                 mailid of the author
+-v, --service-version TEXT      initial service version
+--version                       Show current version.
+--help                          Show this message and exit.
+```
 
 ## Examples:
 
@@ -48,7 +67,7 @@ Generate example service from **api.yml**:
 
     //  Group factor value 1 indicates that more than one same 
     //  api pattern will create a module
-    $ flask-codegen -s api.yml -g 1 example
+    $ flask-leap -s api.yml -g 1 example
     $ tree
 	.
 	|__ api.yml
@@ -112,9 +131,9 @@ Start Example Service:
 Create and Run Docker image of Example Service:
   
     $ make install-docker
-    $ docker run docker run -p 8080:8080 p3/example
+    $ docker run docker run -p 8080:8080 s8sg/example
 
 
 Service Swagger Ui from apis.yml:
 
-Then you can visit http://127.0.0.1:8080/apidocs in a browser.
+Then you can visit http://127.0.0.1:8080/<base_path>/apidocs in a browser.

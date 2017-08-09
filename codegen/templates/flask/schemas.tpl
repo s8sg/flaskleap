@@ -1,6 +1,6 @@
 {% include '_do_not_change.tpl' %}
 
-{% for name, value in schemas.items() %}
+{% for name, value in schemas|dictsort %}
 {{ name }} = {{ value }}
 {%- endfor %}
 

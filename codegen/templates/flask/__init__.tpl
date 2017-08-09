@@ -1,6 +1,6 @@
-from run import run_app
+from {{ service_name }}.run import run_app
 
 
-__author__ = 's8sg'
-__email__ = 'admin@s8sg.co'
-__version__ = '0.1.0'
+__author__ = '{{ AUTHOR }}'
+__email__ = '{{ MAIL }}'
+__version__ = '{{ VERSION }}'

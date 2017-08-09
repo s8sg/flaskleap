@@ -1,5 +1,5 @@
 [tox]
-envlist = py27, py33, py35, py37
+envlist = py33, py35, py37
 
 [testenv]
 setenv =
