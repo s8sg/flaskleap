@@ -4,7 +4,7 @@
 
 Generates Flask Service blueprint code baded on Swagger Specification
 
-**This project is diecly modified on:** `github.com/guokr/swagger-py-codegen`  
+**This project is directly modified on:** `github.com/guokr/swagger-py-codegen`  
   
 **How its different:**  
   
